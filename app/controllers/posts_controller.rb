@@ -1,4 +1,6 @@
 class PostsController < ApplicationController
+  #devise_token_auth_group :member, contains: [:user, :admin]
+  before_action :authenticate_user!, only: [:create, :update, :destroy]
   before_action :set_post, only: [:show, :update, :destroy]
 
   # GET /posts
@@ -15,7 +17,8 @@ class PostsController < ApplicationController
   # POST /posts
   # POST /posts.json
   def create
-    @post = Post.new(post_params)
+    #@post = Post.new(post_params)
+    @post = current_user.posts.build(post_params)
 
     if @post.save
       render :show, status: :created, location: @post
@@ -27,17 +30,25 @@ class PostsController < ApplicationController
   # PATCH/PUT /posts/1
   # PATCH/PUT /posts/1.json
   def update
-    if @post.update(post_params)
-      render :show, status: :ok, location: @post
+    if @post.user == current_user || admin_signed_in?
+      if @post.update(post_params)
+        render :show, status: :ok, location: @post
+      else
+        render json: @post.errors, status: :unprocessable_entity
+      end
     else
-      render json: @post.errors, status: :unprocessable_entity
+      render json: @post.errors, status: :unauthorized
     end
   end
 
   # DELETE /posts/1
   # DELETE /posts/1.json
   def destroy
-    @post.destroy
+    if @post.user == current_user || admin_signed_in?
+      @post.destroy
+    else
+      render json: @post.errors, status: :unauthorized
+    end
   end
 
   private
